@@ -1,12 +1,15 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 
-interface Message {
-  username: string,
-  text: string,
+interface Circle {
+  x: number,
+  y: number,
+  color: string,
 }
+
 interface ServerMessage {
   type: string,
-  message: Message
+  coordinates: Circle[],
+  circleCoordinates: Circle,
 }
 
 @Component({
@@ -18,6 +21,9 @@ interface ServerMessage {
 export class CanvasComponent implements AfterViewInit, OnDestroy {
   ws!: WebSocket;
   @ViewChild('canvas') canvas!: ElementRef;
+  @ViewChild('color') color!: ElementRef;
+  colors = ['green', 'red', 'yellow', 'black', 'blue'];
+  colorCircle!: string;
 
   ngAfterViewInit() {
     this.ws = new WebSocket('ws://localhost:8000/canvas');
@@ -26,23 +32,48 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
     this.ws.onmessage = event => {
       const decodedMessage: ServerMessage = JSON.parse(event.data);
 
-      console.log(decodedMessage);
+      if(decodedMessage.type === 'PREV_CIRCLES'){
+        decodedMessage.coordinates.forEach(coordinate => {
+          this.onDrawCircle(coordinate.x, coordinate.y, coordinate.color);
+        })
+      }
+
+      if(decodedMessage.type === 'NEW_CIRCLE') {
+        const {x, y, color} = decodedMessage.circleCoordinates;
+        this.onDrawCircle(x, y, color);
+      }
     }
+  }
+
+  onSelectColor(event: Event) {
+    this.colorCircle = (<HTMLSelectElement>event.target).value;
+  }
+
+  onDrawCircle(x: number, y: number, color: string){
+    const canvasElement: HTMLCanvasElement = this.canvas.nativeElement;
+    const ctx = canvasElement.getContext("2d")!;
+    ctx.beginPath();
+    ctx.arc(x, y,10,0,2*Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.fill();
   }
 
   onClickCanvas(event: MouseEvent){
     const x = event.offsetX;
     const y = event.offsetY;
+    const color = this.colorCircle;
 
-    const canvasElement: HTMLCanvasElement = this.canvas.nativeElement;
-    const ctx = canvasElement.getContext("2d")!;
-    ctx.beginPath();
-    ctx.arc(x,y,10,0,2*Math.PI);
-    ctx.stroke();
+    this.ws.send(JSON.stringify({
+      type: 'SEND_CIRCLE',
+      coordinates: {x, y, color},
+    }))
   }
 
   ngOnDestroy(){
     this.ws.close();
   }
-
 }
+
+

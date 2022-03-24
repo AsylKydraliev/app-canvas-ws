@@ -1,3 +1,15 @@
-<div>
-  <canvas width="700px" height="500px" #canvas (click)="onClickCanvas($event)"></canvas>
+<div class="content">
+  <mat-form-field appearance="outline">
+    <mat-label>Circle color</mat-label>
+    <select matNativeControl (click)="onSelectColor($event)">
+      <option value="">Color</option>
+      <option value="{{ color }}"  *ngFor="let color of colors" [value]="color" >
+        {{ color }}
+      </option>
+    </select>
+  </mat-form-field>
+
+  <div class="canvas">
+    <canvas width="600px" height="400px" #canvas (click)="onClickCanvas($event)"></canvas>
+  </div>
 </div>
